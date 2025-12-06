@@ -1,16 +1,85 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
+import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
+import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 
 export default function LandingAuthPage() {
   const [isLogin, setIsLogin] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+  const { signIn, signUp, signInWithGoogle } = useAuth()
+  const { toast } = useToast()
+
+  // Estado de formularios
+  const [loginData, setLoginData] = useState({ email: "", password: "" })
+  const [signupData, setSignupData] = useState({ nombre: "", email: "", password: "" })
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      await signIn(loginData)
+      toast({
+        title: "¡Bienvenido de vuelta!",
+        description: "Has iniciado sesión correctamente.",
+      })
+      router.push("/dashboard")
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error al iniciar sesión",
+        description: error.message || "Credenciales inválidas. Por favor, intenta de nuevo.",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      await signUp(signupData)
+      toast({
+        title: "¡Cuenta creada!",
+        description: "Tu cuenta ha sido creada exitosamente.",
+      })
+      router.push("/objetivos")
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error al crear cuenta",
+        description: error.message || "No se pudo crear la cuenta. Por favor, intenta de nuevo.",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true)
+    try {
+      await signInWithGoogle()
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error con Google",
+        description: error.message || "No se pudo iniciar sesión con Google.",
+      })
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -124,30 +193,41 @@ export default function LandingAuthPage() {
                 </TabsList>
 
                 <TabsContent value="login" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Correo electrónico</Label>
-                    <Input
-                      id="login-email"
-                      type="email"
-                      placeholder="tu@email.com"
-                      className="transition-all focus:scale-[1.01]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Contraseña</Label>
-                    <Input
-                      id="login-password"
-                      type="password"
-                      placeholder="••••••••"
-                      className="transition-all focus:scale-[1.01]"
-                    />
-                  </div>
-                  <Button
-                    asChild
-                    className="w-full bg-primary hover:bg-secondary transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <Link href="/objetivos">Iniciar sesión</Link>
-                  </Button>
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="login-email">Correo electrónico</Label>
+                      <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="tu@email.com"
+                        className="transition-all focus:scale-[1.01]"
+                        value={loginData.email}
+                        onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="login-password">Contraseña</Label>
+                      <Input
+                        id="login-password"
+                        type="password"
+                        placeholder="••••••••"
+                        className="transition-all focus:scale-[1.01]"
+                        value={loginData.password}
+                        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full bg-primary hover:bg-secondary transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      disabled={loading}
+                    >
+                      {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+                    </Button>
+                  </form>
                   <div className="relative my-6">
                     <div className="absolute inset-0 flex items-center">
                       <div className="w-full border-t" />
@@ -157,8 +237,11 @@ export default function LandingAuthPage() {
                     </div>
                   </div>
                   <Button
+                    type="button"
                     variant="outline"
                     className="w-full transition-all hover:scale-[1.02] active:scale-[0.98] hover:border-primary bg-transparent"
+                    onClick={handleGoogleSignIn}
+                    disabled={loading}
                   >
                     <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                       <path
@@ -183,39 +266,55 @@ export default function LandingAuthPage() {
                 </TabsContent>
 
                 <TabsContent value="signup" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Nombre completo</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Juan Pérez"
-                      className="transition-all focus:scale-[1.01]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Correo electrónico</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="tu@email.com"
-                      className="transition-all focus:scale-[1.01]"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Contraseña</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="••••••••"
-                      className="transition-all focus:scale-[1.01]"
-                    />
-                  </div>
-                  <Button
-                    asChild
-                    className="w-full bg-primary hover:bg-secondary transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <Link href="/objetivos">Crear cuenta</Link>
-                  </Button>
+                  <form onSubmit={handleSignup} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name">Nombre completo</Label>
+                      <Input
+                        id="signup-name"
+                        type="text"
+                        placeholder="Juan Pérez"
+                        className="transition-all focus:scale-[1.01]"
+                        value={signupData.nombre}
+                        onChange={(e) => setSignupData({ ...signupData, nombre: e.target.value })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Correo electrónico</Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="tu@email.com"
+                        className="transition-all focus:scale-[1.01]"
+                        value={signupData.email}
+                        onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Contraseña</Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="••••••••"
+                        className="transition-all focus:scale-[1.01]"
+                        value={signupData.password}
+                        onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                        required
+                        minLength={6}
+                        disabled={loading}
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full bg-primary hover:bg-secondary transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      disabled={loading}
+                    >
+                      {loading ? "Creando cuenta..." : "Crear cuenta"}
+                    </Button>
+                  </form>
                   <div className="relative my-6">
                     <div className="absolute inset-0 flex items-center">
                       <div className="w-full border-t" />
@@ -225,8 +324,11 @@ export default function LandingAuthPage() {
                     </div>
                   </div>
                   <Button
+                    type="button"
                     variant="outline"
                     className="w-full transition-all hover:scale-[1.02] active:scale-[0.98] hover:border-primary bg-transparent"
+                    onClick={handleGoogleSignIn}
+                    disabled={loading}
                   >
                     <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                       <path

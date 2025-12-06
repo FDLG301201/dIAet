@@ -4,12 +4,13 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Menu, Home, Target, Activity, Scan, TrendingUp, Settings, Plus } from "lucide-react"
+import { Target, Activity, Scan, Plus } from "lucide-react"
 import Link from "next/link"
 import { ProgressCircle } from "@/components/progress-circle"
 import { MacroBar } from "@/components/macro-bar"
 import { MealCard } from "@/components/meal-card"
 import { AddFoodModal } from "@/components/add-food-modal"
+import { AppHeader } from "@/components/app-header"
 import type { FoodItem, MacroData } from "@/lib/types"
 
 const mockFoods = {
@@ -66,7 +67,6 @@ const mockFoods = {
 } as Record<string, FoodItem[]>
 
 export default function DashboardPage() {
-  const [menuOpen, setMenuOpen] = useState(false)
   const [foods, setFoods] = useState(mockFoods)
   const [addFoodModalOpen, setAddFoodModalOpen] = useState(false)
   const [selectedMealType, setSelectedMealType] = useState<string>("")
@@ -135,69 +135,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10">
-      {/* Header */}
-      <header className="bg-card border-b sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setMenuOpen(!menuOpen)} className="lg:hidden">
-              <Menu className="w-6 h-6" />
-            </Button>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
-              dAIet
-            </h1>
-          </div>
-          <nav className="hidden lg:flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild className="bg-primary/10">
-              <Link href="/dashboard">
-                <Home className="w-4 h-4 mr-2" />
-                Inicio
-              </Link>
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/progreso">
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Progreso
-              </Link>
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/preferencias">
-                <Settings className="w-4 h-4 mr-2" />
-                Preferencias
-              </Link>
-            </Button>
-          </nav>
-        </div>
-      </header>
-
-      {/* Mobile Menu */}
-      {menuOpen && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="lg:hidden bg-card border-b shadow-lg"
-        >
-          <nav className="container mx-auto px-4 py-4 space-y-2">
-            <Button variant="ghost" className="w-full justify-start bg-primary/10" asChild>
-              <Link href="/dashboard">
-                <Home className="w-4 h-4 mr-2" />
-                Inicio
-              </Link>
-            </Button>
-            <Button variant="ghost" className="w-full justify-start" asChild>
-              <Link href="/progreso">
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Progreso
-              </Link>
-            </Button>
-            <Button variant="ghost" className="w-full justify-start" asChild>
-              <Link href="/preferencias">
-                <Settings className="w-4 h-4 mr-2" />
-                Preferencias
-              </Link>
-            </Button>
-          </nav>
-        </motion.div>
-      )}
+      <AppHeader />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
