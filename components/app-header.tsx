@@ -4,7 +4,7 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { UserMenu } from "@/components/user-menu"
-import { Menu, Home, TrendingUp, Settings } from "lucide-react"
+import { Menu, Home, TrendingUp } from "lucide-react"
 import Link from "next/link"
 
 export function AppHeader() {
@@ -38,12 +38,6 @@ export function AppHeader() {
                                 Progreso
                             </Link>
                         </Button>
-                        <Button variant="ghost" size="sm" asChild>
-                            <Link href="/preferencias">
-                                <Settings className="w-4 h-4 mr-2" />
-                                Preferencias
-                            </Link>
-                        </Button>
                     </nav>
                     <UserMenu />
                 </div>
@@ -67,12 +61,6 @@ export function AppHeader() {
                             <Link href="/progreso">
                                 <TrendingUp className="w-4 h-4 mr-2" />
                                 Progreso
-                            </Link>
-                        </Button>
-                        <Button variant="ghost" className="w-full justify-start" asChild onClick={() => setMenuOpen(false)}>
-                            <Link href="/preferencias">
-                                <Settings className="w-4 h-4 mr-2" />
-                                Preferencias
                             </Link>
                         </Button>
                     </nav>

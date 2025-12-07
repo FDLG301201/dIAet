@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { User, LogOut, Settings, Sun, Moon, Monitor } from "lucide-react"
+import { LogOut, Settings, Sun, Moon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export function UserMenu() {
@@ -55,14 +55,6 @@ export function UserMenu() {
         return user?.email?.split("@")[0] || "Usuario"
     }
 
-    const themeIcons = {
-        light: Sun,
-        dark: Moon,
-        // system: Monitor,
-    }
-
-    const ThemeIcon = themeIcons[theme as keyof typeof themeIcons] || Monitor
-
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -96,11 +88,6 @@ export function UserMenu() {
                     <span>Oscuro</span>
                     {theme === "dark" && <span className="ml-auto">✓</span>}
                 </DropdownMenuItem>
-                {/* <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer">
-                    <Monitor className="mr-2 h-4 w-4" />
-                    <span>Sistema</span>
-                    {theme === "system" && <span className="ml-auto">✓</span>}
-                </DropdownMenuItem> */}
 
                 <DropdownMenuSeparator />
 
