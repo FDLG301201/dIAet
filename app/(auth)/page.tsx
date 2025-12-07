@@ -53,9 +53,12 @@ export default function LandingAuthPage() {
       await signUp(signupData)
       toast({
         title: "¡Cuenta creada!",
-        description: "Tu cuenta ha sido creada exitosamente.",
+        description: "Por favor revisa tu correo electrónico para confirmar tu cuenta.",
+        duration: 6000,
       })
-      router.push("/objetivos")
+      // No redirigir - el usuario debe confirmar su email primero
+      setSignupData({ nombre: "", email: "", password: "" })
+      setIsLogin(true) // Cambiar a la pestaña de login
     } catch (error: any) {
       toast({
         variant: "destructive",

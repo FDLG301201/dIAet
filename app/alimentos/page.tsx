@@ -1,11 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import Link from "next/link"
+import { useToast } from "@/hooks/use-toast"
+import { saveFoodData, getCompleteOnboardingData, clearOnboardingData } from "@/lib/onboarding"
 
 const foodCategories = [
   {
@@ -62,8 +64,11 @@ const foodCategories = [
 ]
 
 export default function AlimentosPage() {
+  const router = useRouter()
+  const { toast } = useToast()
   const [selectedFoods, setSelectedFoods] = useState<string[]>([])
   const [selectAll, setSelectAll] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const allFoodIds = foodCategories.flatMap((cat) => cat.items.map((item) => item.id))
 
@@ -78,6 +83,71 @@ export default function AlimentosPage() {
 
   const handleFoodToggle = (foodId: string) => {
     setSelectedFoods((prev) => (prev.includes(foodId) ? prev.filter((id) => id !== foodId) : [...prev, foodId]))
+  }
+
+  const handleComplete = async () => {
+    setLoading(true)
+
+    try {
+      // Guardar preferencias de alimentos
+      saveFoodData({ selectedFoods })
+
+      // Obtener todos los datos de onboarding
+      const onboardingData = getCompleteOnboardingData()
+
+      if (!onboardingData) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Faltan datos del onboarding. Por favor completa todos los pasos.",
+        })
+        router.push("/actividad")
+        return
+      }
+
+      // Enviar datos al backend
+      const response = await fetch("/api/profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          gender: onboardingData.gender,
+          birthdate: onboardingData.birthdate,
+          height: onboardingData.height,
+          weight: onboardingData.weight,
+          activityLevel: onboardingData.activityLevel,
+          goal: onboardingData.goal,
+          preferences: onboardingData.preferences,
+          dailyCalories: onboardingData.dailyCalories,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al guardar perfil")
+      }
+
+      // Limpiar datos de onboarding
+      clearOnboardingData()
+
+      toast({
+        title: "¡Perfil completado!",
+        description: `Tu plan personalizado está listo. Calorías diarias: ${onboardingData.dailyCalories}`,
+      })
+
+      router.push("/dashboard")
+    } catch (error: any) {
+      console.error("Error al completar onboarding:", error)
+      toast({
+        variant: "destructive",
+        title: "Error al guardar",
+        description: error.message || "No se pudo guardar tu perfil. Por favor intenta de nuevo.",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -116,11 +186,10 @@ export default function AlimentosPage() {
                       return (
                         <motion.div key={food.id} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                           <Card
-                            className={`cursor-pointer transition-all ${
-                              isSelected
+                            className={`cursor-pointer transition-all ${isSelected
                                 ? "border-primary border-2 bg-primary/10 shadow-md"
                                 : "border hover:border-primary/50"
-                            }`}
+                              }`}
                             onClick={() => handleFoodToggle(food.id)}
                           >
                             <CardContent className="p-4 text-center">
@@ -140,15 +209,21 @@ export default function AlimentosPage() {
 
         <div className="flex gap-4">
           <Button
-            asChild
             variant="outline"
             size="lg"
             className="flex-1 transition-all hover:scale-[1.02] bg-transparent"
+            onClick={() => router.push("/objetivos")}
+            disabled={loading}
           >
-            <Link href="/actividad">Atrás</Link>
+            Atrás
           </Button>
-          <Button asChild size="lg" className="flex-1 bg-primary hover:bg-secondary transition-all hover:scale-[1.02]">
-            <Link href="/dashboard">Comenzar</Link>
+          <Button
+            size="lg"
+            className="flex-1 bg-primary hover:bg-secondary transition-all hover:scale-[1.02]"
+            onClick={handleComplete}
+            disabled={loading}
+          >
+            {loading ? "Guardando..." : "Comenzar"}
           </Button>
         </div>
       </motion.div>

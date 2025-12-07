@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Flame, Scale, Dumbbell } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { saveGoalData } from "@/lib/onboarding"
 
 const goals = [
   {
@@ -43,8 +44,8 @@ export default function ObjetivosPage() {
 
   const handleContinue = () => {
     if (selectedGoal) {
-      localStorage.setItem("onboarding_objetivo", selectedGoal)
-      router.push("/actividad")
+      saveGoalData({ goal: selectedGoal as any })
+      router.push("/alimentos")
     }
   }
 
@@ -73,9 +74,8 @@ export default function ObjetivosPage() {
                 transition={{ delay: index * 0.1 }}
               >
                 <Card
-                  className={`cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-                    isSelected ? `${goal.borderColor} border-2 shadow-lg` : "border"
-                  } ${goal.bgColor}`}
+                  className={`cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl ${isSelected ? `${goal.borderColor} border-2 shadow-lg` : "border"
+                    } ${goal.bgColor}`}
                   onClick={() => setSelectedGoal(goal.id)}
                 >
                   <CardContent className="p-6 text-center">

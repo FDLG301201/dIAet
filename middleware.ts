@@ -39,6 +39,10 @@ export async function updateSession(request: NextRequest) {
     const publicRoutes = ['/', '/auth/callback']
     const isPublicRoute = publicRoutes.some(route => request.nextUrl.pathname === route)
 
+    // Rutas de onboarding que no requieren verificación de perfil
+    const onboardingRoutes = ['/actividad', '/objetivos', '/alimentos']
+    const isOnboardingRoute = onboardingRoutes.some(route => request.nextUrl.pathname === route)
+
     // Si el usuario no está autenticado y trata de acceder a una ruta protegida
     if (!user && !isPublicRoute && !request.nextUrl.pathname.startsWith('/_next') && !request.nextUrl.pathname.startsWith('/api')) {
         const url = request.nextUrl.clone()
@@ -46,11 +50,49 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url)
     }
 
-    // Si el usuario está autenticado y trata de acceder a la página de auth
-    if (user && request.nextUrl.pathname === '/') {
-        const url = request.nextUrl.clone()
-        url.pathname = '/dashboard'
-        return NextResponse.redirect(url)
+    // Si el usuario está autenticado
+    if (user) {
+        // Si trata de acceder a la página de auth, redirigir según estado del perfil
+        if (request.nextUrl.pathname === '/') {
+            // Verificar si el perfil está completo
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('genero, fecha_nacimiento, altura, peso_actual, nivel_actividad, objetivo')
+                .eq('id', user.id)
+                .single()
+
+            // Si el perfil está incompleto, redirigir a onboarding
+            if (!profile || !profile.genero || !profile.fecha_nacimiento || !profile.altura ||
+                !profile.peso_actual || !profile.nivel_actividad || !profile.objetivo) {
+                const url = request.nextUrl.clone()
+                url.pathname = '/actividad'
+                return NextResponse.redirect(url)
+            }
+
+            // Si el perfil está completo, redirigir a dashboard
+            const url = request.nextUrl.clone()
+            url.pathname = '/dashboard'
+            return NextResponse.redirect(url)
+        }
+
+        // Si no está en ruta de onboarding ni API, verificar que el perfil esté completo
+        if (!isOnboardingRoute &&
+            !request.nextUrl.pathname.startsWith('/api') &&
+            request.nextUrl.pathname !== '/dashboard') {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('genero, fecha_nacimiento, altura, peso_actual, nivel_actividad, objetivo')
+                .eq('id', user.id)
+                .single()
+
+            // Si el perfil está incompleto, redirigir a onboarding
+            if (!profile || !profile.genero || !profile.fecha_nacimiento || !profile.altura ||
+                !profile.peso_actual || !profile.nivel_actividad || !profile.objetivo) {
+                const url = request.nextUrl.clone()
+                url.pathname = '/actividad'
+                return NextResponse.redirect(url)
+            }
+        }
     }
 
     return supabaseResponse
