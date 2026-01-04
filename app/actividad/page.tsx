@@ -11,6 +11,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { User, UserRound, Calendar, Ruler, Weight } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { saveActivityData, type OnboardingActivityData } from "@/lib/onboarding"
+import { useRegistration } from "@/context/RegistrationContext"
+import { useAuth } from "@/contexts/auth-context"
+import { useEffect } from "react"
 
 const activityLevels = [
   {
@@ -38,6 +41,20 @@ const activityLevels = [
 export default function ActividadPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { isRegistrationFlow } = useRegistration()
+  const { user } = useAuth()
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/dashboard")
+    } else if (!isRegistrationFlow) {
+      router.replace("/")
+    }
+  }, [user, isRegistrationFlow, router])
+
+  if (!isRegistrationFlow && !user) {
+    return null
+  }
 
   const [gender, setGender] = useState<"male" | "female">("male")
   const [activityLevel, setActivityLevel] = useState<"sedentary" | "light" | "moderate" | "high">("moderate")
@@ -230,8 +247,8 @@ export default function ActividadPage() {
                     <motion.div key={level.id} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
                       <Card
                         className={`cursor-pointer transition-all ${activityLevel === level.id
-                            ? "border-primary border-2 bg-primary/10"
-                            : "border hover:border-primary/50"
+                          ? "border-primary border-2 bg-primary/10"
+                          : "border hover:border-primary/50"
                           }`}
                         onClick={() => setActivityLevel(level.id as any)}
                       >

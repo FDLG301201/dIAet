@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "next-themes"
 import { AuthProvider } from "@/contexts/auth-context"
+import { RegistrationProvider } from "@/context/RegistrationContext"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
@@ -47,9 +48,11 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange={false}
         >
-          <AuthProvider>
-            {children}
-          </AuthProvider>
+          <RegistrationProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </RegistrationProvider>
           <Toaster />
         </ThemeProvider>
         <Analytics />

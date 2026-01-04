@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
+import { useRegistration } from "@/context/RegistrationContext"
 
 export default function LandingAuthPage() {
   const [isLogin, setIsLogin] = useState(true)
@@ -18,6 +19,25 @@ export default function LandingAuthPage() {
   const router = useRouter()
   const { signIn, signUp, signInWithGoogle } = useAuth()
   const { toast } = useToast()
+
+  // Check for verified param
+  useEffect(() => {
+    // We can use useSearchParams - but reusing router logic might be simpler or just standard window check for this landing page
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('verified') === 'pending') {
+        // Need a slight delay to ensure toast shows after hydration
+        setTimeout(() => {
+          toast({
+            title: "¡Registro completado!",
+            description: "Hemos enviado un enlace de confirmación a tu correo. Por favor verifícalo para iniciar sesión.",
+            duration: 6000,
+          })
+          setIsLogin(true) // Switch to login tab
+        }, 500)
+      }
+    }
+  }, [toast])
 
   // Estado de formularios
   const [loginData, setLoginData] = useState({ email: "", password: "" })
@@ -45,25 +65,53 @@ export default function LandingAuthPage() {
     }
   }
 
+  const { setRegistrationData, clearRegistrationData } = useRegistration()
+
+  // Clear any existing registration data on mount
+  useState(() => {
+    // Only clear if we are not already returning from a redirect?
+    // Actually, on the auth landing page, we probably want to start fresh if they are signing up.
+  })
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      await signUp(signupData)
-      toast({
-        title: "¡Cuenta creada!",
-        description: "Por favor revisa tu correo electrónico para confirmar tu cuenta.",
-        duration: 6000,
+      // Validar datos básicos
+      if (!signupData.nombre || !signupData.email || !signupData.password) {
+        throw new Error("Por favor completa todos los campos")
+      }
+
+      if (signupData.password.length < 6) {
+        throw new Error("La contraseña debe tener al menos 6 caracteres")
+      }
+
+      // Guardar en contexto de registro
+      setRegistrationData({
+        name: signupData.nombre,
+        email: signupData.email,
+        password: signupData.password
       })
-      // No redirigir - el usuario debe confirmar su email primero
-      setSignupData({ nombre: "", email: "", password: "" })
-      setIsLogin(true) // Cambiar a la pestaña de login
+
+      // Limpiar datos previos de onboarding si existen
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('onboarding_activity')
+        sessionStorage.removeItem('onboarding_goal')
+        sessionStorage.removeItem('onboarding_foods')
+      }
+
+      toast({
+        title: "¡Comencemos!",
+        description: "Vamos a personalizar tu experiencia.",
+      })
+
+      router.push("/actividad")
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Error al crear cuenta",
-        description: error.message || "No se pudo crear la cuenta. Por favor, intenta de nuevo.",
+        title: "Error",
+        description: error.message || "Ocurrió un error. Por favor intenta de nuevo.",
       })
     } finally {
       setLoading(false)

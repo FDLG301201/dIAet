@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Target, Activity, Scan, Plus } from "lucide-react"
+import { Target, Activity, Scan, Plus, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { ProgressCircle } from "@/components/progress-circle"
 import { MacroBar } from "@/components/macro-bar"
@@ -12,101 +12,59 @@ import { MealCard } from "@/components/meal-card"
 import { AddFoodModal } from "@/components/add-food-modal"
 import { AppHeader } from "@/components/app-header"
 import type { FoodItem, MacroData } from "@/lib/types"
-
-const mockFoods = {
-  desayuno: [
-    {
-      id: "1",
-      nombre: "Avena con frutas y nueces",
-      porcion: "1 tazón",
-      calorias: 450,
-      proteinas: 15,
-      carbohidratos: 60,
-      grasas: 12,
-      esRecomendacion: true,
-      consumido: true,
-    },
-  ],
-  almuerzo: [
-    {
-      id: "2",
-      nombre: "Pechuga de pollo con quinoa",
-      porcion: "200g",
-      calorias: 580,
-      proteinas: 45,
-      carbohidratos: 50,
-      grasas: 15,
-      esRecomendacion: true,
-      consumido: true,
-    },
-  ],
-  merienda: [
-    {
-      id: "3",
-      nombre: "Yogurt griego con granola",
-      calorias: 288,
-      proteinas: 18,
-      carbohidratos: 35,
-      grasas: 8,
-      esRecomendacion: true,
-      consumido: false,
-    },
-  ],
-  cena: [
-    {
-      id: "4",
-      nombre: "Salmón con batata",
-      calorias: 500,
-      proteinas: 35,
-      carbohidratos: 40,
-      grasas: 18,
-      esRecomendacion: true,
-      consumido: false,
-    },
-  ],
-} as Record<string, FoodItem[]>
+import { useDailyLog } from "@/hooks/use-daily-log"
+import { useUserProfile } from "@/hooks/use-user-profile"
 
 export default function DashboardPage() {
-  const [foods, setFoods] = useState(mockFoods)
+  const { profile } = useUserProfile()
+  // Use profile.id if available, otherwise it falls back to 'user-123' inside the hook or we can let it be undefined until profile loads
+  const { dailyLog, loading, error, markFoodConsumed, addFood } = useDailyLog(profile?.id)
   const [addFoodModalOpen, setAddFoodModalOpen] = useState(false)
   const [selectedMealType, setSelectedMealType] = useState<string>("")
 
-  const calculateTotals = () => {
-    let totalCalories = 0
-    let totalProteinas = 0
-    let totalCarbohidratos = 0
-    let totalGrasas = 0
+  useEffect(() => {
+    console.log('PERFIL', profile);
+  }, [profile]);
 
-    Object.values(foods).forEach((mealFoods) => {
-      mealFoods.forEach((food) => {
-        if (food.consumido) {
-          totalCalories += food.calorias
-          totalProteinas += food.proteinas
-          totalCarbohidratos += food.carbohidratos
-          totalGrasas += food.grasas
-        }
-      })
-    })
-
-    return { totalCalories, totalProteinas, totalCarbohidratos, totalGrasas }
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
   }
 
-  const totals = calculateTotals()
-  const caloriesTarget = 1886
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-destructive">Error: {error}</div>
+      </div>
+    )
+  }
+
+  // Fallback if dailyLog is null (shouldn't happen after loading if API works)
+  const foods = dailyLog?.comidas || {
+    desayuno: [], almuerzo: [], merienda: [], cena: []
+  }
+
+  const totals = dailyLog?.totales || {
+    calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0
+  }
+
+  const caloriesTarget = 1886 // This should come from user profile ideally
 
   const macros: MacroData[] = [
-    { name: "Proteínas", current: totals.totalProteinas, target: 120, color: "bg-blue-500", unit: "g" },
-    { name: "Carbohidratos", current: totals.totalCarbohidratos, target: 250, color: "bg-orange-500", unit: "g" },
-    { name: "Grasas", current: totals.totalGrasas, target: 65, color: "bg-purple-500", unit: "g" },
+    { name: "Proteínas", current: totals.proteinas, target: 120, color: "bg-blue-500", unit: "g" },
+    { name: "Carbohidratos", current: totals.carbohidratos, target: 250, color: "bg-orange-500", unit: "g" },
+    { name: "Grasas", current: totals.grasas, target: 65, color: "bg-purple-500", unit: "g" },
   ]
 
-  const handleToggleFood = (mealType: string, foodId: string) => {
-    setFoods((prev) => ({
-      ...prev,
-      [mealType]: prev[mealType].map((food) =>
-        food.id === foodId ? { ...food, consumido: !food.consumido, horaConsumo: new Date() } : food,
-      ),
-    }))
+  const handleToggleFood = async (mealType: string, foodId: string) => {
+    // Determine current consumed state
+    const food = foods[mealType as keyof typeof foods]?.find(f => f.id === foodId)
+    if (food) {
+      await markFoodConsumed(foodId, mealType, !food.consumido)
+    }
   }
 
   const handleAddFood = (mealType: string) => {
@@ -114,23 +72,15 @@ export default function DashboardPage() {
     setAddFoodModalOpen(true)
   }
 
-  const handleAddFoodSubmit = (newFood: any) => {
-    const foodItem: FoodItem = {
-      id: Date.now().toString(),
+  const handleAddFoodSubmit = async (newFood: any) => {
+    await addFood(newFood.tipoComida || selectedMealType, {
       nombre: newFood.nombre,
       porcion: newFood.porcion,
-      calorias: newFood.calorias,
-      proteinas: newFood.proteinas,
-      carbohidratos: newFood.carbohidratos,
-      grasas: newFood.grasas,
-      esRecomendacion: false,
-      consumido: false,
-    }
-
-    setFoods((prev) => ({
-      ...prev,
-      [newFood.tipoComida]: [...prev[newFood.tipoComida], foodItem],
-    }))
+      calorias: Number(newFood.calorias),
+      proteinas: Number(newFood.proteinas),
+      carbohidratos: Number(newFood.carbohidratos),
+      grasas: Number(newFood.grasas)
+    })
   }
 
   return (
@@ -145,7 +95,7 @@ export default function DashboardPage() {
             <Card className="border-2 shadow-lg">
               <CardContent className="p-8">
                 <div className="flex flex-col md:flex-row items-center gap-8">
-                  <ProgressCircle current={totals.totalCalories} target={caloriesTarget} />
+                  <ProgressCircle current={totals.calorias} target={caloriesTarget} />
                   <div className="flex-1 space-y-4 w-full">
                     <h2 className="text-2xl font-bold">Progreso Diario</h2>
                     {macros.map((macro, index) => (
@@ -179,14 +129,24 @@ export default function DashboardPage() {
                     merienda: "Merienda",
                     cena: "Cena",
                   }
-                  const totalCalories = mealFoods.reduce((sum, food) => sum + food.calorias, 0)
+                  // Sort to keep order consistent or put logged items at top? Default order is fine.
+                  const totalCalories = (mealFoods as FoodItem[]).reduce((sum, food) => sum + (food.consumido ? food.calorias : 0), 0)
+                  // Note: original code summed ALL calories in the meal header, regardless of consumed?
+                  // "totalCalories = mealFoods.reduce((sum, food) => sum + food.calorias, 0)"
+                  // Yes, it seemed to sum potential calories. Let's keep that behavior if that's what it was,
+                  // or change to consumed? Usually meal header shows total potential or total eaten.
+                  // Let's stick to total potential for "Plan", or total eaten for "Log".
+                  // Given it's a "Daily Log" but populated with "Recommendations", maybe potential is better.
+                  // But let's check what the user wants. The prompt says "Daily Log".
+                  // Let's sum ALL for now to match previous mock behavior.
+                  const totalCaloriesInMeal = (mealFoods as FoodItem[]).reduce((sum, food) => sum + food.calorias, 0)
 
                   return (
                     <MealCard
                       key={mealType}
-                      mealName={mealNames[mealType]}
-                      foods={mealFoods}
-                      totalCalories={totalCalories}
+                      mealName={mealNames[mealType] || mealType}
+                      foods={mealFoods as FoodItem[]}
+                      totalCalories={totalCaloriesInMeal}
                       onToggleFood={(foodId) => handleToggleFood(mealType, foodId)}
                       onAddFood={() => handleAddFood(mealType)}
                       index={index}
@@ -226,7 +186,12 @@ export default function DashboardPage() {
       <Button
         size="lg"
         className="fixed bottom-6 right-6 rounded-full w-14 h-14 shadow-xl bg-primary hover:bg-secondary"
-        onClick={() => setAddFoodModalOpen(true)}
+        onClick={() => {
+          setSelectedMealType("desayuno") // Default or ask? Modal seems to need manual selection if not passed?
+          // Original code: handleAddFood('???') was called from MealCard specific button.
+          // FAB opens without specific meal type.
+          setAddFoodModalOpen(true)
+        }}
       >
         <Plus className="w-6 h-6" />
       </Button>
@@ -235,6 +200,8 @@ export default function DashboardPage() {
         isOpen={addFoodModalOpen}
         onClose={() => setAddFoodModalOpen(false)}
         onAddFood={handleAddFoodSubmit}
+        // Assuming AddFoodModal has a way to select meal type if not provided, or we pass selectedMealType
+        defaultMealType={selectedMealType} // Does AddFoodModal accept this?
       />
     </div>
   )

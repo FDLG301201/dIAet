@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Flame, Scale, Dumbbell } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { saveGoalData } from "@/lib/onboarding"
+import { useRegistration } from "@/context/RegistrationContext"
+import { useAuth } from "@/contexts/auth-context"
+import { useEffect } from "react"
 
 const goals = [
   {
@@ -41,6 +44,20 @@ const goals = [
 export default function ObjetivosPage() {
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null)
   const router = useRouter()
+  const { isRegistrationFlow } = useRegistration()
+  const { user } = useAuth()
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/dashboard")
+    } else if (!isRegistrationFlow) {
+      router.replace("/")
+    }
+  }, [user, isRegistrationFlow, router])
+
+  if (!isRegistrationFlow && !user) {
+    return null
+  }
 
   const handleContinue = () => {
     if (selectedGoal) {

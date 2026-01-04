@@ -44,7 +44,7 @@ export async function updateSession(request: NextRequest) {
     const isOnboardingRoute = onboardingRoutes.some(route => request.nextUrl.pathname === route)
 
     // Si el usuario no está autenticado y trata de acceder a una ruta protegida
-    if (!user && !isPublicRoute && !request.nextUrl.pathname.startsWith('/_next') && !request.nextUrl.pathname.startsWith('/api')) {
+    if (!user && !isPublicRoute && !isOnboardingRoute && !request.nextUrl.pathname.startsWith('/_next') && !request.nextUrl.pathname.startsWith('/api')) {
         const url = request.nextUrl.clone()
         url.pathname = '/'
         return NextResponse.redirect(url)

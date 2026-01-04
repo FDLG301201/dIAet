@@ -20,11 +20,12 @@ interface AddFoodModalProps {
     grasas: number
     porcion?: string
   }) => void
+  defaultMealType?: string
 }
 
-export function AddFoodModal({ isOpen, onClose, onAddFood }: AddFoodModalProps) {
+export function AddFoodModal({ isOpen, onClose, onAddFood, defaultMealType = "desayuno" }: AddFoodModalProps) {
   const [foodText, setFoodText] = useState("")
-  const [tipoComida, setTipoComida] = useState<string>("desayuno")
+  const [tipoComida, setTipoComida] = useState<string>(defaultMealType)
   const [loading, setLoading] = useState(false)
   const [analyzedFood, setAnalyzedFood] = useState<any>(null)
 

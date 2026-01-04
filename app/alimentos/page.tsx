@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { saveFoodData, getCompleteOnboardingData, clearOnboardingData } from "@/lib/onboarding"
+import { useRegistration } from "@/context/RegistrationContext"
+import { useAuth } from "@/contexts/auth-context"
+import { useEffect } from "react"
 
 const foodCategories = [
   {
@@ -69,6 +72,20 @@ export default function AlimentosPage() {
   const [selectedFoods, setSelectedFoods] = useState<string[]>([])
   const [selectAll, setSelectAll] = useState(false)
   const [loading, setLoading] = useState(false)
+  const { registrationData, isRegistrationFlow, clearRegistrationData } = useRegistration()
+  const { user } = useAuth()
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/dashboard")
+    } else if (!isRegistrationFlow) {
+      router.replace("/")
+    }
+  }, [user, isRegistrationFlow, router])
+
+  if (!isRegistrationFlow && !user) {
+    return null
+  }
 
   const allFoodIds = foodCategories.flatMap((cat) => cat.items.map((item) => item.id))
 
@@ -95,55 +112,60 @@ export default function AlimentosPage() {
       // Obtener todos los datos de onboarding
       const onboardingData = getCompleteOnboardingData()
 
-      if (!onboardingData) {
+      if (!onboardingData || !registrationData) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Faltan datos del onboarding. Por favor completa todos los pasos.",
+          description: "Faltan datos del registro. Por favor completa todos los pasos.",
         })
-        router.push("/actividad")
+        if (!registrationData) router.push("/register")
+        else router.push("/actividad")
         return
       }
 
-      // Enviar datos al backend
-      const response = await fetch("/api/profile", {
+      // Enviar datos al backend (crear usuario + perfil)
+      const response = await fetch("/api/auth/complete-registration", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          gender: onboardingData.gender,
-          birthdate: onboardingData.birthdate,
-          height: onboardingData.height,
-          weight: onboardingData.weight,
-          activityLevel: onboardingData.activityLevel,
-          goal: onboardingData.goal,
-          preferences: onboardingData.preferences,
-          dailyCalories: onboardingData.dailyCalories,
+          ...registrationData,
+          ...onboardingData
         }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || "Error al guardar perfil")
+        throw new Error(data.error || "Error al crear cuenta")
       }
 
-      // Limpiar datos de onboarding
+      // Limpiar datos
       clearOnboardingData()
+      clearRegistrationData()
 
       toast({
-        title: "¡Perfil completado!",
-        description: `Tu plan personalizado está listo. Calorías diarias: ${onboardingData.dailyCalories}`,
+        title: "¡Cuenta creada!",
+        description: "Tu perfil ha sido configurado correctamente. Por favor verifica tu email.",
+        duration: 5000,
       })
 
-      router.push("/dashboard")
+      // Wait a moment for the toast? Or just redirect. 
+      // Ideally redirect to a "Verify your email" page or back to login with a message.
+      // Since supabase usually requires email verification, they can't login yet.
+      // Redirecting to login page with a success query param or state?
+      // Or if the user is automatically logged in (if email confirmation is off), then dashboard.
+      // Assuming email confirmation is ON based on previous conversation context.
+
+      router.push("/?verified=pending")
+
     } catch (error: any) {
-      console.error("Error al completar onboarding:", error)
+      console.error("Error al completar registro:", error)
       toast({
         variant: "destructive",
-        title: "Error al guardar",
-        description: error.message || "No se pudo guardar tu perfil. Por favor intenta de nuevo.",
+        title: "Error",
+        description: error.message || "No se pudo crear la cuenta. Por favor intenta de nuevo.",
       })
     } finally {
       setLoading(false)
@@ -187,8 +209,8 @@ export default function AlimentosPage() {
                         <motion.div key={food.id} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                           <Card
                             className={`cursor-pointer transition-all ${isSelected
-                                ? "border-primary border-2 bg-primary/10 shadow-md"
-                                : "border hover:border-primary/50"
+                              ? "border-primary border-2 bg-primary/10 shadow-md"
+                              : "border hover:border-primary/50"
                               }`}
                             onClick={() => handleFoodToggle(food.id)}
                           >
