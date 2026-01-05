@@ -59,10 +59,13 @@ export async function signIn({ email, password }: SignInData) {
 export async function signInWithGoogle() {
     const supabase = createClient()
 
+    // Use environment variable for redirect URL, fallback to window.location.origin for development
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: `${window.location.origin}/auth/callback`,
+            redirectTo: `${appUrl}/auth/callback`,
         },
     })
 
@@ -105,8 +108,11 @@ export async function getCurrentUser(): Promise<User | null> {
 export async function resetPassword(email: string) {
     const supabase = createClient()
 
+    // Use environment variable for redirect URL, fallback to window.location.origin for development
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${appUrl}/auth/reset-password`,
     })
 
     if (error) {
